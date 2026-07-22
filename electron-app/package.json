@@ -1,0 +1,16 @@
+{
+  "name": "ad-silencer-widget",
+  "version": "1.0.0",
+  "description": "Always-on-top desktop widget that auto-mutes YouTube ads and restores volume when your show resumes.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

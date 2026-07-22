@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  @keyframes eq { 0%,100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes sweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  a { color: #2563eb; } a:hover { color: #1d4ed8; }
+</style>
+</helmet>
+<div style="min-height: 100vh; display: flex; align-items: flex-start; justify-content: flex-end; background: radial-gradient(1200px 700px at 22% 18%, #3a4a6b 0%, #1c2537 46%, #0e1420 100%); font-family: 'Inter Tight', system-ui, sans-serif; padding: 40px; position: relative;">
+
+  <!-- faint desktop dock hint -->
+  <div style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 8px 14px; border-radius: 18px; background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1);">
+    <sc-for list="{{ dock }}" as="d" hint-placeholder-count="5">
+      <div style="width: 34px; height: 34px; border-radius: 9px; background: {{ d }};"></div>
+    </sc-for>
+  </div>
+
+  <!-- the widget -->
+  <div style="width: 320px; background: rgba(20,24,32,0.72); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border-radius: 20px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 30px 70px -20px rgba(0,0,0,0.6); overflow: hidden;">
+
+    <!-- title bar (draggable) -->
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; cursor: grab; border-bottom: 1px solid rgba(255,255,255,0.07);">
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <div style="width: 22px; height: 22px; border-radius: 6px; background: #ff2d2d; display: flex; align-items: center; justify-content: center;">
+          <span style="width: 0; height: 0; border-left: 7px solid #fff; border-top: 4px solid transparent; border-bottom: 4px solid transparent; margin-left: 2px;"></span>
+        </div>
+        <span style="font-size: 12.5px; font-weight: 700; color: #fff; letter-spacing: -0.1px;">AD Silencer</span>
+        <span style="display: flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.09);">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 1.6s ease-in-out infinite;"></span>
+          <span style="font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.75); font-family: 'IBM Plex Mono', monospace;">ACTIVE</span>
+        </span>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.28);"></span>
+        <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.28);"></span>
+        <span style="width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.28);"></span>
+      </div>
+    </div>
+
+    <!-- main state -->
+    <div style="padding: 16px; background: {{ cardBg }}; transition: background 600ms ease; position: relative; overflow: hidden;">
+      <div style="position: absolute; inset: 0; opacity: {{ sweepOn }}; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.14), transparent); animation: sweep 2.4s linear infinite;"></div>
+      <div style="position: relative;">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-size: 10px; font-weight: 600; letter-spacing: 1.3px; color: {{ tagColor }}; font-family: 'IBM Plex Mono', monospace;">{{ stateTag }}</span>
+          <span style="font-size: 12px; font-weight: 700; color: {{ volColor }}; font-family: 'IBM Plex Mono', monospace;">{{ volLabel }}</span>
+        </div>
+        <div style="font-size: 21px; font-weight: 700; color: #fff; margin-top: 7px; line-height: 1.12; letter-spacing: -0.5px;">{{ stateTitle }}</div>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 6px; line-height: 1.4;">{{ stateSub }}</div>
+
+        <!-- equalizer -->
+        <div style="display: flex; align-items: flex-end; gap: 3px; height: 32px; margin-top: 16px;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="20">
+            <div style="flex: 1; height: 100%; background: {{ b.color }}; border-radius: 2px; transform-origin: bottom; animation: eq {{ b.dur }} ease-in-out infinite; animation-delay: {{ b.delay }}; animation-play-state: {{ b.play }};"></div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+
+    <!-- now playing strip -->
+    <div style="padding: 12px 14px; display: flex; align-items: center; gap: 11px; border-top: 1px solid rgba(255,255,255,0.07);">
+      <div style="width: 40px; height: 40px; border-radius: 9px; background: {{ thumbBg }}; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 400ms;">
+        <span style="font-size: 18px;">{{ thumbIcon }}</span>
+      </div>
+      <div style="min-width: 0; flex: 1;">
+        <div style="font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.45); letter-spacing: 0.4px; text-transform: uppercase;">{{ nowLabel }}</div>
+        <div style="font-size: 13px; font-weight: 600; color: #fff; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ nowTitle }}</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px;">{{ nowChannel }}</div>
+      </div>
+    </div>
+
+    <!-- volume bar -->
+    <div style="padding: 0 14px 12px;">
+      <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden;">
+        <div style="height: 100%; width: {{ volPct }}; background: {{ volColor }}; border-radius: 999px; transition: width 500ms ease, background 400ms;"></div>
+      </div>
+    </div>
+
+    <!-- control -->
+    <div style="padding: 0 14px 14px;">
+      <button onClick="{{ toggleMute }}" style="width: 100%; border: none; cursor: pointer; padding: 11px; border-radius: 12px; font-family: 'Inter Tight', sans-serif; font-size: 13px; font-weight: 600; background: {{ btnBg }}; color: {{ btnColor }}; display: flex; align-items: center; justify-content: center; gap: 7px; transition: background 200ms;">
+        <span style="font-size: 15px;">{{ btnIcon }}</span>{{ btnLabel }}
+      </button>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4); line-height: 1.35; margin-top: 9px;">{{ footNote }}</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { phase: 'show', t: 0, manualMute: false, clock: '9:41' };
+
+  // timeline (seconds): show 0-6, ad 6-13, show 13-20 loop
+  componentDidMount() {
+    this.iv = setInterval(() => {
+      this.setState(s => {
+        let t = (s.t + 1) % 20;
+        let phase = (t >= 6 && t < 13) ? 'ad' : 'show';
+        return { t, phase };
+      });
+    }, 1000);
+    this.clk = setInterval(() => {
+      const d = new Date();
+      this.setState({ clock: d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0') });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.iv); clearInterval(this.clk); }
+
+  renderVals() {
+    const { phase, manualMute } = this.state;
+    const isAd = phase === 'ad';
+    const muted = isAd || manualMute;
+
+    const barColor = isAd ? 'rgba(255,255,255,0.28)' : '#8affc1';
+    const bars = Array.from({ length: 20 }, (_, i) => ({
+      color: barColor,
+      dur: (0.7 + (i % 5) * 0.18).toFixed(2) + 's',
+      delay: ((i % 7) * 0.11).toFixed(2) + 's',
+      play: muted ? 'paused' : 'running'
+    }));
+
+    return {
+      dock: ['#4f7cff','#ff5f57','#2ec26b','#f5b83d','rgba(255,255,255,0.35)'],
+      bars,
+      cardBg: isAd ? '#c81e1e' : '#12161e',
+      sweepOn: isAd ? 1 : 0,
+      tagColor: isAd ? 'rgba(255,255,255,0.8)' : '#8affc1',
+      stateTag: isAd ? 'AD DETECTED' : 'MONITORING AUDIO',
+      stateTitle: isAd ? 'Ad silenced' : (manualMute ? 'Muted by you' : 'Your show is playing'),
+      stateSub: isAd
+        ? 'Volume dropped automatically. It’ll restore the moment your video resumes.'
+        : (manualMute ? 'Tap resume to bring the sound back.' : 'Watching for the next ad break — nothing to do.'),
+
+      thumbBg: isAd ? '#f3d3d3' : '#e6f4ff',
+      thumbIcon: isAd ? '📢' : '🎬',
+      nowLabel: isAd ? 'Interrupting' : 'Now watching',
+      nowTitle: isAd ? 'Sponsored advertisement' : 'The Deep Field — Episode 7',
+      nowChannel: isAd ? 'Skippable in a few seconds' : 'Meridian Studios',
+
+      volLabel: muted ? 'MUTED' : '100%',
+      volPct: muted ? '0%' : '100%',
+      volColor: muted ? '#c81e1e' : '#22c55e',
+
+      btnLabel: isAd ? 'Auto-muting ad' : (manualMute ? 'Resume sound' : 'Mute now'),
+      btnIcon: muted ? '🔈' : '🔊',
+      btnBg: isAd ? '#f0e2e2' : (manualMute ? '#22c55e' : '#0d0f14'),
+      btnColor: isAd ? '#9a3838' : '#fff',
+      toggleMute: () => { if (!isAd) this.setState(s => ({ manualMute: !s.manualMute })); },
+
+      footNote: isAd
+        ? 'Detected via audio pattern + YouTube ad markers'
+        : 'Running quietly in the background',
+    };
+  }
+}
+</script>
+</body>
+</html>
