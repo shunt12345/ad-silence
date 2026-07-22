@@ -30,6 +30,10 @@ jobs:
         working-directory: electron-app
         run: npm install
 
+      - name: Run state-machine tests
+        working-directory: electron-app
+        run: npm test
+
       - name: Smoke-test packaging (unpacked, no publish)
         working-directory: electron-app
         run: npx electron-builder --linux --dir --publish=never

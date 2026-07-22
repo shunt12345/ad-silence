@@ -63,6 +63,26 @@ reflects whichever tab is currently active/focused — the extension tracks
 per-tab state and switches what it reports to the widget on tab/window
 focus changes.
 
+## Testing the mute/restore behavior
+
+The ad→mute→content→restore state machine (`electron-app/src/state-machine.js`)
+is Electron-free on purpose, so it can be exercised headlessly without a GUI
+or a real YouTube tab:
+
+```
+cd electron-app
+npm install
+npm test
+```
+
+`test/state-machine.test.js` drives it directly — simulated ad-start/
+content-resume/disconnect events — and asserts on the resulting mute calls:
+ads mute, content resuming restores audio, rapid flicker near an ad
+boundary only commits once (the debounce), manual mute is inert during an
+ad, and disconnecting from the detector always restores audio rather than
+leaving it muted. This is the same logic `main.js` wires up to the real
+window and OS volume calls; the test just swaps those two for spies.
+
 ## Running it
 
 ### 1. Widget app
