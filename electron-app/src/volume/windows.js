@@ -1,17 +1,105 @@
 const { execFile } = require('child_process');
 
-// Windows has no shell-native "set system mute to X" primitive without a
-// native addon (Core Audio's ISimpleAudioVolume/IAudioEndpointVolume). To
-// avoid requiring a compiled native module, we drive the same virtual-key
-// the hardware mute key sends (VK_VOLUME_MUTE, 0xAD) via SendKeys, which
-// toggles mute without touching the underlying volume level. Because it's
-// a toggle, we track the state we last asked for ourselves so repeated
-// calls with the same value are no-ops instead of flipping twice.
-let lastKnownMuted = false;
+// Windows has no shell-native "set default device mute to X" command. This
+// drives the same Core Audio interface (IAudioEndpointVolume) the OS's own
+// volume mixer uses, via a small C# shim compiled on the fly with
+// PowerShell's Add-Type — no compiled native addon or external module
+// (nircmd, AudioDeviceCmdlets, ...) required. GetMute/SetMute give us real,
+// queryable state instead of guessing.
+//
+// If the COM interop fails for any reason (locked-down PowerShell,
+// execution policy, missing .NET, etc.) we fall back to toggling the
+// hardware mute virtual key, tracking the assumed state ourselves.
+
+const PS_SCRIPT = `
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IAudioEndpointVolume {
+    int NotImpl1();
+    int NotImpl2();
+    int GetChannelCount(out uint count);
+    int SetMasterVolumeLevel(float level, ref Guid context);
+    int SetMasterVolumeLevelScalar(float level, ref Guid context);
+    int GetMasterVolumeLevel(out float level);
+    int GetMasterVolumeLevelScalar(out float level);
+    int SetChannelVolumeLevel(uint channel, float level, ref Guid context);
+    int SetChannelVolumeLevelScalar(uint channel, float level, ref Guid context);
+    int GetChannelVolumeLevel(uint channel, out float level);
+    int GetChannelVolumeLevelScalar(uint channel, out float level);
+    int SetMute([MarshalAs(UnmanagedType.Bool)] bool mute, ref Guid context);
+    int GetMute(out bool mute);
+}
+
+[Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IMMDevice {
+    int Activate(ref Guid iid, int clsCtx, IntPtr activationParams, [MarshalAs(UnmanagedType.IUnknown)] out object endpoint);
+}
+
+[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IMMDeviceEnumerator {
+    int NotImpl1();
+    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice device);
+}
+
+[ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
+public class MMDeviceEnumeratorComObject { }
+
+public static class DefaultAudioEndpoint {
+    public static IAudioEndpointVolume Get() {
+        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumeratorComObject();
+        IMMDevice device;
+        enumerator.GetDefaultAudioEndpoint(0, 1, out device);
+        var iid = typeof(IAudioEndpointVolume).GUID;
+        object epv;
+        device.Activate(ref iid, 23, IntPtr.Zero, out epv);
+        return (IAudioEndpointVolume)epv;
+    }
+}
+"@
+
+$ctx = [Guid]::Empty
+$epv = [DefaultAudioEndpoint]::Get()
+
+switch ($env:AD_SILENCER_ACTION) {
+  'get' {
+    $muted = $false
+    $epv.GetMute([ref]$muted) | Out-Null
+    Write-Output ($(if ($muted) { 'true' } else { 'false' }))
+  }
+  'mute' {
+    $epv.SetMute($true, [ref]$ctx) | Out-Null
+  }
+  'unmute' {
+    $epv.SetMute($false, [ref]$ctx) | Out-Null
+  }
+}
+`;
+
+function runComInterop(action) {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'powershell',
+      ['-NoProfile', '-NonInteractive', '-Command', PS_SCRIPT],
+      { env: { ...process.env, AD_SILENCER_ACTION: action } },
+      (err, stdout, stderr) => {
+        if (err) reject(err instanceof Error ? new Error(`${err.message}: ${stderr}`) : err);
+        else resolve(stdout.trim());
+      }
+    );
+  });
+}
+
+// Fallback: toggle the hardware mute virtual key (0xAD). This can only
+// toggle, so we track the state we last asked for and treat it as
+// authoritative for the fallback path only.
+let fallbackMuted = false;
 
 function sendMuteKey() {
   return new Promise((resolve, reject) => {
-    const script = "(New-Object -ComObject WScript.Shell).SendKeys([char]173)";
+    const script = '(New-Object -ComObject WScript.Shell).SendKeys([char]173)';
     execFile('powershell', ['-NoProfile', '-Command', script], (err, stdout, stderr) => {
       if (err) reject(err instanceof Error ? new Error(`${err.message}: ${stderr}`) : err);
       else resolve();
@@ -19,14 +107,32 @@ function sendMuteKey() {
   });
 }
 
+let comInteropBroken = false;
+
 async function setMuted(muted) {
-  if (muted === lastKnownMuted) return;
+  if (!comInteropBroken) {
+    try {
+      await runComInterop(muted ? 'mute' : 'unmute');
+      return;
+    } catch (err) {
+      console.error('[ad-silencer] Core Audio interop failed, falling back to mute-key toggle:', err.message);
+      comInteropBroken = true;
+    }
+  }
+  if (muted === fallbackMuted) return;
   await sendMuteKey();
-  lastKnownMuted = muted;
+  fallbackMuted = muted;
 }
 
 async function isMuted() {
-  return lastKnownMuted;
+  if (!comInteropBroken) {
+    try {
+      return (await runComInterop('get')) === 'true';
+    } catch (err) {
+      comInteropBroken = true;
+    }
+  }
+  return fallbackMuted;
 }
 
 module.exports = { setMuted, isMuted };
