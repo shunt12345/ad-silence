@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax-check all JavaScript
+        run: |
+          set -e
+          find electron-app extension -name '*.js' -not -path '*/node_modules/*' -print0 \
+            | xargs -0 -n1 node --check
+
+      - name: Validate JSON manifests
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('electron-app/package.json'))"
+          node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json'))"
+
+      - name: Install electron-app dependencies
+        working-directory: electron-app
+        run: npm install
+
+      - name: Run state-machine tests
+        working-directory: electron-app
+        run: npm test
+
+      - name: Smoke-test packaging (unpacked, no publish)
+        working-directory: electron-app
+        run: npx electron-builder --linux --dir --publish=never

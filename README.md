@@ -46,14 +46,42 @@ guessing a volume level), so the user's actual volume level is always
 preserved and restored automatically:
 - **macOS:** `osascript -e 'set volume output muted …'`
 - **Linux:** `pactl set-sink-mute @DEFAULT_SINK@ …` (PulseAudio/PipeWire)
-- **Windows:** toggles the hardware mute virtual key via PowerShell
-  `SendKeys`, tracked internally so repeat calls are idempotent. (There's
-  no mute/unmute shell primitive on Windows without a native Core Audio
-  addon; this avoids requiring a compiled dependency.)
+- **Windows:** drives the real Core Audio `IAudioEndpointVolume` interface
+  (`GetMute`/`SetMute`) via a small C# shim compiled on the fly with
+  PowerShell's `Add-Type` — no compiled native addon or extra module
+  required, and state is queried rather than assumed. Falls back to
+  toggling the hardware mute virtual key (tracked internally) if the COM
+  interop fails for any reason.
 
 If the extension isn't connected, the widget shows a "PAUSED"/offline
 state and does **not** auto-mute — matching the handoff's requirement not
 to mute blindly without a live detector.
+
+If more than one YouTube tab is open, each tab's audio is muted
+independently the instant its own ad starts, but the widget's UI always
+reflects whichever tab is currently active/focused — the extension tracks
+per-tab state and switches what it reports to the widget on tab/window
+focus changes.
+
+## Testing the mute/restore behavior
+
+The ad→mute→content→restore state machine (`electron-app/src/state-machine.js`)
+is Electron-free on purpose, so it can be exercised headlessly without a GUI
+or a real YouTube tab:
+
+```
+cd electron-app
+npm install
+npm test
+```
+
+`test/state-machine.test.js` drives it directly — simulated ad-start/
+content-resume/disconnect events — and asserts on the resulting mute calls:
+ads mute, content resuming restores audio, rapid flicker near an ad
+boundary only commits once (the debounce), manual mute is inert during an
+ad, and disconnecting from the detector always restores audio rather than
+leaving it muted. This is the same logic `main.js` wires up to the real
+window and OS volume calls; the test just swaps those two for spies.
 
 ## Running it
 
@@ -77,21 +105,43 @@ the offline state.
    reflecting whatever's playing, muting automatically whenever an ad
    plays.
 
+## Building an installable app
+
+```
+cd electron-app
+npm install
+npm run dist:mac    # or dist:win / dist:linux / dist (host platform)
+```
+
+Uses [electron-builder](https://www.electron.build/) with the config in
+`electron-app/package.json`, producing a `.dmg` (mac), NSIS installer
+(Windows), or `.AppImage` (Linux) in `electron-app/dist/`, using
+`electron-app/build/icon.png` as the source app icon.
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push/PR: syntax-checks all JS in
+`electron-app/` and `extension/`, validates the JSON manifests, installs
+dependencies, and does an unpacked `electron-builder` smoke build to catch
+packaging regressions.
+
 ## Project layout
 
 ```
 electron-app/
   main.js                   window creation, IPC, state machine, debounce
   preload.js                contextBridge API exposed to the renderer
+  build/icon.png             source app icon for electron-builder
   src/ws-server.js          local WebSocket server (the detector bridge)
   src/volume/               per-OS mute/unmute (mac.js, linux.js, windows.js)
   src/renderer/             the widget UI (index.html, styles.css, renderer.js)
 extension/
   manifest.json
   content.js                YouTube player DOM watcher
-  background.js             WebSocket client + tab mute
+  background.js             WebSocket client + per-tab state + tab mute
   popup.html                minimal status popup
 design/                     original design handoff (reference only)
+.github/workflows/ci.yml    syntax/manifest checks + packaging smoke test
 ```
 
 ## Notes / follow-ups
@@ -101,9 +151,14 @@ design/                     original design handoff (reference only)
   alarm, so brief worker naps don't lose the connection for long, but a
   fully native-messaging-host bridge would be more robust than a raw
   WebSocket if this ships broadly.
-- Windows volume control uses a mute-key toggle rather than the Core Audio
-  API; swapping in a native `ISimpleAudioVolume` addon would remove the
-  PowerShell dependency and make state queryable instead of assumed.
+- The Windows Core Audio interop is implemented per the standard
+  `IMMDeviceEnumerator` → `IMMDevice` → `IAudioEndpointVolume` COM pattern
+  but hasn't been exercised on real Windows hardware in this environment;
+  it has an automatic fallback if `Add-Type`/COM activation fails for any
+  reason (locked-down execution policy, missing .NET, etc.).
+- Per-tab state in `background.js` lives in memory, so an idle service
+  worker restart forgets it until each tab's content script next reports —
+  usually within moments of the tab regaining focus.
 - System audio fingerprinting (the doc's fallback detection strategy) is
   not implemented — the extension-based detector is the only path, per the
   handoff's own recommendation.
