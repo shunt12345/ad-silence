@@ -9,13 +9,17 @@ function run(cmd, args) {
   });
 }
 
-async function setMuted(muted) {
-  await run('pactl', ['set-sink-mute', '@DEFAULT_SINK@', muted ? '1' : '0']);
+// Volume is a real 0-100 level (not a mute flag) so we can duck to a
+// specific quiet percentage during ads, not just silence entirely.
+async function getVolume() {
+  const out = await run('pactl', ['get-sink-volume', '@DEFAULT_SINK@']);
+  const match = out.match(/(\d+)%/);
+  return match ? Number(match[1]) : 100;
 }
 
-async function isMuted() {
-  const out = await run('pactl', ['get-sink-mute', '@DEFAULT_SINK@']);
-  return /yes/i.test(out);
+async function setVolume(percent) {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  await run('pactl', ['set-sink-volume', '@DEFAULT_SINK@', `${clamped}%`]);
 }
 
-module.exports = { setMuted, isMuted };
+module.exports = { getVolume, setVolume };

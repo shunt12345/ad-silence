@@ -318,8 +318,57 @@ body {
 }
 
 .volume-fill.is-muted {
-  width: 0%;
   background: #c81e1e;
+}
+
+/* Duck-level picker */
+.duck-picker {
+  padding: 0 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.duck-picker-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.duck-picker-options {
+  display: flex;
+  gap: 5px;
+}
+
+.duck-option {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.65);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+}
+
+.duck-option:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.duck-option:focus-visible {
+  outline: 2px solid #8ec2ff;
+  outline-offset: 1px;
+}
+
+.duck-option.is-active {
+  background: #22c55e;
+  border-color: #22c55e;
+  color: #0d0f14;
 }
 
 /* Control button */

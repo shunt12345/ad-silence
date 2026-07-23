@@ -1,8 +1,15 @@
 # AD Silencer
 
 An always-on-top desktop widget that watches what's playing on YouTube and
-automatically mutes the moment an ad starts, then restores volume the
-instant your video resumes. It also offers a manual mute/resume override.
+automatically **lowers the volume** the moment an ad starts — to a quiet
+5%/10%/15% you choose, not silence — then restores your exact prior volume
+the instant your video resumes. It also offers a manual full-mute/resume
+override for normal playback.
+
+This is intentionally a *reduction*, not a block: the ad still plays,
+still loads, still counts as a real impression — the only thing that
+changes is how loud it is while it's on screen. That's a smaller, more
+honest intervention than an ad blocker, and it's meant to read that way.
 
 This repo implements the real product described in
 [`design/design_handoff_ad_silencer_widget/README.md`](design/design_handoff_ad_silencer_widget/README.md)
@@ -36,26 +43,33 @@ Two components, talking over a local WebSocket:
 - **`electron-app/`** — a frameless, transparent, always-on-top widget
   window that recreates the design's UI pixel-for-pixel (colors,
   typography, spacing, equalizer, sweep animation, etc. — see
-  `electron-app/src/renderer/`). Its main process runs the WebSocket
-  server, debounces incoming ad/content transitions (~400ms) so state
-  doesn't flicker at ad boundaries, tracks manual-mute overrides, and
-  drives real OS-level system volume/mute (`electron-app/src/volume/`).
+  `electron-app/src/renderer/`), plus a 5%/10%/15% "Ad volume" picker.
+  Its main process runs the WebSocket server, debounces incoming
+  ad/content transitions (~400ms) so state doesn't flicker at ad
+  boundaries, tracks manual-mute overrides, and drives real OS-level
+  system volume (`electron-app/src/volume/`).
 
-Muting is done via each OS's native "mute" primitive (not by zeroing and
-guessing a volume level), so the user's actual volume level is always
-preserved and restored automatically:
-- **macOS:** `osascript -e 'set volume output muted …'`
-- **Linux:** `pactl set-sink-mute @DEFAULT_SINK@ …` (PulseAudio/PipeWire)
+Volume is controlled as a real 0–100 level on every platform (not just a
+mute flag), so an ad ducks to your chosen quiet percentage and a manual
+mute goes fully to 0 — either way, the exact level from just before the
+reduction is remembered and restored, never hardcoded to 100:
+- **macOS:** `osascript -e 'set volume output volume N'`
+- **Linux:** `pactl set-sink-volume @DEFAULT_SINK@ N%` (PulseAudio/PipeWire)
 - **Windows:** drives the real Core Audio `IAudioEndpointVolume` interface
-  (`GetMute`/`SetMute`) via a small C# shim compiled on the fly with
-  PowerShell's `Add-Type` — no compiled native addon or extra module
-  required, and state is queried rather than assumed. Falls back to
-  toggling the hardware mute virtual key (tracked internally) if the COM
-  interop fails for any reason.
+  (`Get`/`SetMasterVolumeLevelScalar`) via a small C# shim compiled on the
+  fly with PowerShell's `Add-Type` — no compiled native addon or extra
+  module required, and the level is queried rather than assumed. Falls
+  back to the hardware mute virtual key (which can only approximate duck
+  as fully muted/unmuted, not a precise percentage) if the COM interop
+  fails for any reason.
+
+The duck percentage is changeable live from the widget and persists
+across restarts (`electron-app/src/settings.js`, a small JSON file in the
+app's user-data directory).
 
 If the extension isn't connected, the widget shows a "PAUSED"/offline
-state and does **not** auto-mute — matching the handoff's requirement not
-to mute blindly without a live detector.
+state and does **not** auto-duck — matching the handoff's requirement not
+to touch volume blindly without a live detector.
 
 If more than one YouTube tab is open, each tab's audio is muted
 independently the instant its own ad starts, but the widget's UI always
@@ -76,12 +90,15 @@ npm test
 ```
 
 `test/state-machine.test.js` drives it directly — simulated ad-start/
-content-resume/disconnect events — and asserts on the resulting mute calls:
-ads mute, content resuming restores audio, rapid flicker near an ad
-boundary only commits once (the debounce), manual mute is inert during an
-ad, and disconnecting from the detector always restores audio rather than
-leaving it muted. This is the same logic `main.js` wires up to the real
-window and OS volume calls; the test just swaps those two for spies.
+content-resume/disconnect events, duck-level changes — and asserts on the
+resulting volume calls: ads duck to the chosen percent (not to zero) while
+remembering the exact prior level, content resuming restores that exact
+level, rapid flicker near an ad boundary only commits once (the
+debounce), manual mute is inert during an ad, changing the duck level
+mid-ad applies live, and disconnecting from the detector always restores
+audio rather than leaving it reduced. This is the same logic `main.js`
+wires up to the real window and OS volume calls; the test just swaps
+those two for spies.
 
 ## Running it
 
@@ -133,7 +150,8 @@ electron-app/
   preload.js                contextBridge API exposed to the renderer
   build/icon.png             source app icon for electron-builder
   src/ws-server.js          local WebSocket server (the detector bridge)
-  src/volume/               per-OS mute/unmute (mac.js, linux.js, windows.js)
+  src/settings.js           persists the chosen duck percentage
+  src/volume/               per-OS 0-100 volume level control (mac.js, linux.js, windows.js)
   src/renderer/             the widget UI (index.html, styles.css, renderer.js)
 extension/
   manifest.json
@@ -155,7 +173,9 @@ design/                     original design handoff (reference only)
   `IMMDeviceEnumerator` → `IMMDevice` → `IAudioEndpointVolume` COM pattern
   but hasn't been exercised on real Windows hardware in this environment;
   it has an automatic fallback if `Add-Type`/COM activation fails for any
-  reason (locked-down execution policy, missing .NET, etc.).
+  reason (locked-down execution policy, missing .NET, etc.) — though the
+  fallback can only approximate duck as fully muted/unmuted, since the
+  hardware mute key has no concept of a specific percentage.
 - Per-tab state in `background.js` lives in memory, so an idle service
   worker restart forgets it until each tab's content script next reports —
   usually within moments of the tab regaining focus.

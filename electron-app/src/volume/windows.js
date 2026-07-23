@@ -1,15 +1,17 @@
 const { execFile } = require('child_process');
 
-// Windows has no shell-native "set default device mute to X" command. This
-// drives the same Core Audio interface (IAudioEndpointVolume) the OS's own
-// volume mixer uses, via a small C# shim compiled on the fly with
+// Windows has no shell-native "set default device volume to N%" command.
+// This drives the same Core Audio interface (IAudioEndpointVolume) the
+// OS's own volume mixer uses, via a small C# shim compiled on the fly with
 // PowerShell's Add-Type — no compiled native addon or external module
-// (nircmd, AudioDeviceCmdlets, ...) required. GetMute/SetMute give us real,
-// queryable state instead of guessing.
+// (nircmd, AudioDeviceCmdlets, ...) required. Get/SetMasterVolumeLevelScalar
+// give us a real, queryable 0-100 level so ads can be ducked to a specific
+// quiet percentage rather than only silenced outright.
 //
 // If the COM interop fails for any reason (locked-down PowerShell,
-// execution policy, missing .NET, etc.) we fall back to toggling the
-// hardware mute virtual key, tracking the assumed state ourselves.
+// execution policy, missing .NET, etc.) we fall back to the hardware mute
+// virtual key, which can only approximate "duck" as "fully muted" or
+// "unmuted" — real percentage levels aren't achievable without COM.
 
 const PS_SCRIPT = `
 Add-Type -TypeDefinition @"
@@ -65,25 +67,23 @@ $epv = [DefaultAudioEndpoint]::Get()
 
 switch ($env:AD_SILENCER_ACTION) {
   'get' {
-    $muted = $false
-    $epv.GetMute([ref]$muted) | Out-Null
-    Write-Output ($(if ($muted) { 'true' } else { 'false' }))
+    $level = 0.0
+    $epv.GetMasterVolumeLevelScalar([ref]$level) | Out-Null
+    Write-Output ([Math]::Round($level * 100))
   }
-  'mute' {
-    $epv.SetMute($true, [ref]$ctx) | Out-Null
-  }
-  'unmute' {
-    $epv.SetMute($false, [ref]$ctx) | Out-Null
+  'set' {
+    $target = [float]($env:AD_SILENCER_LEVEL) / 100.0
+    $epv.SetMasterVolumeLevelScalar($target, [ref]$ctx) | Out-Null
   }
 }
 `;
 
-function runComInterop(action) {
+function runComInterop(action, level) {
   return new Promise((resolve, reject) => {
     execFile(
       'powershell',
       ['-NoProfile', '-NonInteractive', '-Command', PS_SCRIPT],
-      { env: { ...process.env, AD_SILENCER_ACTION: action } },
+      { env: { ...process.env, AD_SILENCER_ACTION: action, AD_SILENCER_LEVEL: String(level ?? '') } },
       (err, stdout, stderr) => {
         if (err) reject(err instanceof Error ? new Error(`${err.message}: ${stderr}`) : err);
         else resolve(stdout.trim());
@@ -92,10 +92,9 @@ function runComInterop(action) {
   });
 }
 
-// Fallback: toggle the hardware mute virtual key (0xAD). This can only
-// toggle, so we track the state we last asked for and treat it as
-// authoritative for the fallback path only.
-let fallbackMuted = false;
+// Fallback: toggle the hardware mute virtual key (0xAD). Can only
+// approximate "duck" as fully muted (0) vs unmuted (assume 100).
+let fallbackVolume = 100;
 
 function sendMuteKey() {
   return new Promise((resolve, reject) => {
@@ -109,30 +108,35 @@ function sendMuteKey() {
 
 let comInteropBroken = false;
 
-async function setMuted(muted) {
+async function getVolume() {
   if (!comInteropBroken) {
     try {
-      await runComInterop(muted ? 'mute' : 'unmute');
+      return Number(await runComInterop('get'));
+    } catch (err) {
+      console.error('[ad-silencer] Core Audio interop failed, falling back to mute-key toggle:', err.message);
+      comInteropBroken = true;
+    }
+  }
+  return fallbackVolume;
+}
+
+async function setVolume(percent) {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  if (!comInteropBroken) {
+    try {
+      await runComInterop('set', clamped);
       return;
     } catch (err) {
       console.error('[ad-silencer] Core Audio interop failed, falling back to mute-key toggle:', err.message);
       comInteropBroken = true;
     }
   }
-  if (muted === fallbackMuted) return;
-  await sendMuteKey();
-  fallbackMuted = muted;
-}
-
-async function isMuted() {
-  if (!comInteropBroken) {
-    try {
-      return (await runComInterop('get')) === 'true';
-    } catch (err) {
-      comInteropBroken = true;
-    }
+  const wantsMuted = clamped === 0;
+  const isMuted = fallbackVolume === 0;
+  if (wantsMuted !== isMuted) {
+    await sendMuteKey();
   }
-  return fallbackMuted;
+  fallbackVolume = clamped;
 }
 
-module.exports = { setMuted, isMuted };
+module.exports = { getVolume, setVolume };
