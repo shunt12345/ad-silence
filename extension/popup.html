@@ -3,9 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <style>
+  * {
+    box-sizing: border-box;
+  }
   body {
     margin: 0;
-    width: 220px;
+    width: 240px;
     padding: 14px;
     font-family: system-ui, sans-serif;
     background: #12161e;
@@ -13,18 +16,93 @@
   }
   h1 {
     font-size: 13px;
-    margin: 0 0 6px;
+    margin: 0 0 2px;
+  }
+  .tagline {
+    font-size: 10.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0 0 12px;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    margin-bottom: 12px;
+  }
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+  }
+  .status-dot.is-ad {
+    background: #c81e1e;
+  }
+  .status-text {
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+  .picker-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .picker button {
+    flex: 1;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 0;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .picker button.is-active {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #0d0f14;
   }
   p {
-    font-size: 11.5px;
-    line-height: 1.4;
-    color: rgba(255, 255, 255, 0.6);
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.5);
     margin: 0;
   }
 </style>
 </head>
 <body>
   <h1>AD Silencer</h1>
-  <p>Reporting YouTube ad/content state to the AD Silencer desktop widget. Keep the widget app running to auto-mute ads.</p>
+  <p class="tagline">Lowers ad volume, doesn't block ads</p>
+
+  <div class="status">
+    <span class="status-dot" id="statusDot"></span>
+    <span class="status-text" id="statusText">Checking this tab…</span>
+  </div>
+
+  <span class="picker-label">Ad volume</span>
+  <div class="picker" id="picker">
+    <button data-percent="5" type="button">5%</button>
+    <button data-percent="10" type="button">10%</button>
+    <button data-percent="15" type="button">15%</button>
+  </div>
+
+  <p>Works standalone on this tab. Also connects to the AD Silencer desktop widget if it's running, for a visual panel and system-wide volume control.</p>
+
+  <script src="popup.js"></script>
 </body>
 </html>

@@ -1,12 +1,37 @@
 // Watches YouTube's player DOM for the classes it adds while an ad is
-// playing (`ad-showing` / `ad-interrupting` on `.html5-video-player`) and
-// reports {state, videoTitle, channel, thumbnailUrl} to the background
-// service worker, which forwards it to the AD Silencer desktop widget.
+// playing (`ad-showing` / `ad-interrupting` on `.html5-video-player`).
+//
+// Two things happen on every ad/content transition:
+//  1. The extension ducks the actual <video> element's volume itself,
+//     right here in the tab - no companion app required. This is the
+//     standalone path: install just the extension and ads get quieter.
+//  2. It also reports {state, videoTitle, channel, thumbnailUrl} to the
+//     background service worker, which forwards it to the optional AD
+//     Silencer desktop widget for people who also want the visual status
+//     panel and system-wide (not just this-tab) volume control.
 
 const AD_CLASSES = ['ad-showing', 'ad-interrupting'];
+const DEFAULT_DUCK_PERCENT = 10;
+
 let lastSentState = null;
 let playerObserver = null;
 let observedPlayer = null;
+
+let duckPercent = DEFAULT_DUCK_PERCENT;
+let isDucked = false;
+let savedVideoVolume = null;
+
+chrome.storage.sync.get({ duckPercent: DEFAULT_DUCK_PERCENT }, (items) => {
+  duckPercent = items.duckPercent;
+  if (isDucked) applyDuckVolume();
+});
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.duckPercent) {
+    duckPercent = changes.duckPercent.newValue;
+    if (isDucked) applyDuckVolume(); // live-apply, matching the desktop widget's behavior
+  }
+});
 
 function getVideoId() {
   try {
@@ -42,8 +67,36 @@ function isAdShowing(player) {
   return AD_CLASSES.some((cls) => player.classList.contains(cls));
 }
 
+function applyDuckVolume() {
+  const video = observedPlayer && observedPlayer.querySelector('video');
+  if (video) video.volume = Math.max(0, Math.min(100, duckPercent)) / 100;
+}
+
+function restoreVolume() {
+  const video = observedPlayer && observedPlayer.querySelector('video');
+  if (video && savedVideoVolume !== null) video.volume = savedVideoVolume;
+  savedVideoVolume = null;
+}
+
+function applyLocalDuck(isAd) {
+  const video = observedPlayer && observedPlayer.querySelector('video');
+  if (!video) return;
+
+  if (isAd && !isDucked) {
+    savedVideoVolume = video.volume;
+    isDucked = true;
+    applyDuckVolume();
+  } else if (!isAd && isDucked) {
+    isDucked = false;
+    restoreVolume();
+  }
+}
+
 function reportState(player) {
-  const state = isAdShowing(player) ? 'ad' : 'content';
+  const isAd = isAdShowing(player);
+  applyLocalDuck(isAd);
+
+  const state = isAd ? 'ad' : 'content';
   const payload = {
     type: 'state',
     state,
@@ -61,6 +114,8 @@ function attachToPlayer(player) {
   if (observedPlayer === player) return;
   if (playerObserver) playerObserver.disconnect();
   observedPlayer = player;
+  isDucked = false;
+  savedVideoVolume = null;
 
   playerObserver = new MutationObserver(() => reportState(player));
   playerObserver.observe(player, { attributes: true, attributeFilter: ['class'] });
