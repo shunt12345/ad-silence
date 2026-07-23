@@ -12,11 +12,11 @@ switch (process.platform) {
     break;
   default:
     impl = {
-      async setMuted() {
-        throw new Error(`System volume control is not supported on platform "${process.platform}"`);
+      async getVolume() {
+        return 100;
       },
-      async isMuted() {
-        return false;
+      async setVolume() {
+        throw new Error(`System volume control is not supported on platform "${process.platform}"`);
       },
     };
 }

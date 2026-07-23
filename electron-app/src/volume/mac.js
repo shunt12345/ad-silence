@@ -9,13 +9,16 @@ function run(script) {
   });
 }
 
-async function setMuted(muted) {
-  await run(`set volume output muted ${muted ? 'true' : 'false'}`);
+// Volume is a real 0-100 level (not a mute flag) so we can duck to a
+// specific quiet percentage during ads, not just silence entirely.
+async function getVolume() {
+  const out = await run('output volume of (get volume settings)');
+  return Number(out);
 }
 
-async function isMuted() {
-  const out = await run('output muted of (get volume settings)');
-  return out === 'true';
+async function setVolume(percent) {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  await run(`set volume output volume ${clamped}`);
 }
 
-module.exports = { setMuted, isMuted };
+module.exports = { getVolume, setVolume };

@@ -3,6 +3,7 @@ const path = require('path');
 const volume = require('./src/volume');
 const { DetectorBridge, PORT } = require('./src/ws-server');
 const { WidgetStateMachine } = require('./src/state-machine');
+const settings = require('./src/settings');
 
 const DEBOUNCE_MS = 400;
 const WIDGET_WIDTH = 320;
@@ -10,11 +11,22 @@ const WIDGET_WIDTH = 320;
 let win;
 let bridge;
 
+const initialSettings = settings.load();
+
 const machine = new WidgetStateMachine({
   debounceMs: DEBOUNCE_MS,
-  onMuteChange: async (muted) => {
+  duckPercent: initialSettings.duckPercent,
+  onGetVolume: async () => {
     try {
-      await volume.setMuted(muted);
+      return await volume.getVolume();
+    } catch (err) {
+      console.error('[ad-silencer] volume control failed:', err.message);
+      return 100;
+    }
+  },
+  onSetVolume: async (percent) => {
+    try {
+      await volume.setVolume(percent);
     } catch (err) {
       console.error('[ad-silencer] volume control failed:', err.message);
     }
@@ -59,6 +71,12 @@ function createWindow() {
 
 ipcMain.handle('widget:get-state', () => machine.getState());
 ipcMain.handle('widget:toggle-manual-mute', () => machine.toggleManualMute());
+
+ipcMain.handle('widget:set-duck-percent', async (_evt, percent) => {
+  const state = await machine.setDuckPercent(percent);
+  settings.save({ duckPercent: state.duckPercent });
+  return state;
+});
 
 ipcMain.handle('widget:resize-content', (_evt, { height }) => {
   if (win && !win.isDestroyed() && typeof height === 'number') {

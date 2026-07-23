@@ -14,6 +14,7 @@
   const nowTitle = document.getElementById('nowTitle');
   const nowChannel = document.getElementById('nowChannel');
   const volumeFill = document.getElementById('volumeFill');
+  const duckPicker = document.getElementById('duckPicker');
   const controlButton = document.getElementById('controlButton');
   const btnIcon = document.getElementById('btnIcon');
   const btnLabel = document.getElementById('btnLabel');
@@ -30,8 +31,14 @@
     bars.push(bar);
   }
 
+  duckPicker.querySelectorAll('.duck-option').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      window.widgetAPI.setDuckPercent(Number(btn.dataset.percent));
+    });
+  });
+
   function render(state) {
-    const { detectionState, manualMute, muted, nowPlaying } = state;
+    const { detectionState, manualMute, reduced, duckPercent, nowPlaying } = state;
     const isAd = detectionState === 'ad';
     const isDisconnected = detectionState === 'disconnected';
 
@@ -45,11 +52,11 @@
     if (isDisconnected) {
       stateTag.textContent = 'DETECTION OFFLINE';
       stateTitle.textContent = 'Waiting for the extension';
-      stateSub.textContent = 'Connect the AD Silencer browser extension to start auto-muting ads.';
+      stateSub.textContent = 'Connect the AD Silencer browser extension to start lowering ad volume.';
     } else if (isAd) {
       stateTag.textContent = 'AD DETECTED';
-      stateTitle.textContent = 'Ad silenced';
-      stateSub.textContent = "Volume dropped automatically. It'll restore the moment your video resumes.";
+      stateTitle.textContent = 'Ad volume lowered';
+      stateSub.textContent = `Volume dropped to ${duckPercent}% automatically. It'll return to normal the moment your video resumes.`;
     } else if (manualMute) {
       stateTag.textContent = 'MONITORING AUDIO';
       stateTitle.textContent = 'Muted by you';
@@ -60,10 +67,10 @@
       stateSub.textContent = 'Watching for the next ad break — nothing to do.';
     }
 
-    volLabel.textContent = isDisconnected ? '—' : muted ? 'MUTED' : '100%';
-    volLabel.classList.toggle('is-muted', muted && !isAd);
+    volLabel.textContent = isDisconnected ? '—' : isAd ? `${duckPercent}%` : manualMute ? 'MUTED' : '100%';
+    volLabel.classList.toggle('is-muted', reduced);
 
-    bars.forEach((bar) => bar.classList.toggle('is-muted', muted || isDisconnected));
+    bars.forEach((bar) => bar.classList.toggle('is-muted', reduced || isDisconnected));
 
     // Now playing strip
     thumb.classList.toggle('is-ad', isAd);
@@ -79,15 +86,22 @@
     nowTitle.textContent = nowPlaying.videoTitle || (isDisconnected ? 'Nothing playing' : 'Waiting for playback…');
     nowChannel.textContent = nowPlaying.channel || '—';
 
-    // Volume bar
-    volumeFill.classList.toggle('is-muted', muted);
+    // Volume bar reflects the real target percent (duck level, 0 for
+    // manual mute, or 100 when audible) rather than a binary on/off.
+    volumeFill.classList.toggle('is-muted', reduced);
+    volumeFill.style.width = `${isAd ? duckPercent : manualMute ? 0 : 100}%`;
+
+    // Duck-level picker
+    duckPicker.querySelectorAll('.duck-option').forEach((btn) => {
+      btn.classList.toggle('is-active', Number(btn.dataset.percent) === duckPercent);
+    });
 
     // Control button
     controlButton.classList.toggle('is-manual-mute', manualMute && !isAd);
     controlButton.classList.toggle('is-ad-disabled', isAd);
     if (isAd) {
       btnIcon.textContent = '🔈';
-      btnLabel.textContent = 'Auto-muting ad';
+      btnLabel.textContent = 'Auto-lowering ad';
     } else if (manualMute) {
       btnIcon.textContent = '🔈';
       btnLabel.textContent = 'Resume sound';
