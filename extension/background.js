@@ -1,7 +1,9 @@
 // Bridges YouTube ad-state events from content scripts to the AD Silencer
-// desktop widget's local WebSocket server, and mutes/unmutes each YouTube
-// tab directly (the "mute only the YouTube tab" preference from the
-// handoff doc) for immediate feedback even before the widget reacts.
+// desktop widget's local WebSocket server (optional - the content script
+// already ducks each tab's own audio directly, this is only for people who
+// also want the visual widget / system-wide volume control), mutes each
+// YouTube tab directly for the tab-mute UX nicety, and answers the popup's
+// queries about the active tab's current ad/content state.
 
 const SOCKET_URL = 'ws://127.0.0.1:8934';
 const RECONNECT_BASE_MS = 1000;
@@ -55,20 +57,31 @@ function forwardActiveState() {
   send(tabStates.get(activeTabId) || NEUTRAL_STATE);
 }
 
-chrome.runtime.onMessage.addListener((message, sender) => {
-  if (!message || message.type !== 'state' || !sender.tab || typeof sender.tab.id !== 'number') return;
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message && message.type === 'state' && sender.tab && typeof sender.tab.id === 'number') {
+    const tabId = sender.tab.id;
+    tabStates.set(tabId, {
+      state: message.state,
+      videoTitle: message.videoTitle,
+      channel: message.channel,
+      thumbnailUrl: message.thumbnailUrl,
+    });
 
-  const tabId = sender.tab.id;
-  tabStates.set(tabId, {
-    state: message.state,
-    videoTitle: message.videoTitle,
-    channel: message.channel,
-    thumbnailUrl: message.thumbnailUrl,
-  });
+    chrome.tabs.update(tabId, { muted: message.state === 'ad' }).catch(() => {});
 
-  chrome.tabs.update(tabId, { muted: message.state === 'ad' }).catch(() => {});
+    if (tabId === activeTabId) forwardActiveState();
+    return;
+  }
 
-  if (tabId === activeTabId) forwardActiveState();
+  // The popup has no "tab" of its own, so it asks for whatever the
+  // active YouTube tab last reported instead of pushing state itself.
+  if (message && message.type === 'popup:get-active-state') {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tabId = tabs[0] && tabs[0].id;
+      sendResponse(tabStates.get(tabId) || NEUTRAL_STATE);
+    });
+    return true; // keep the message channel open for the async response
+  }
 });
 
 function forgetTab(tabId) {

@@ -1,10 +1,13 @@
 # AD Silencer
 
-An always-on-top desktop widget that watches what's playing on YouTube and
+A Chrome extension that watches what's playing on YouTube and
 automatically **lowers the volume** the moment an ad starts — to a quiet
 5%/10%/15% you choose, not silence — then restores your exact prior volume
-the instant your video resumes. It also offers a manual full-mute/resume
-override for normal playback.
+the instant your video resumes. **The extension works entirely on its own**
+— install it and that's the whole product. An optional always-on-top
+desktop widget is also included for people who want a visual status panel
+and system-wide (not just this-tab) volume control, plus a manual
+full-mute/resume override, but it's not required.
 
 This is intentionally a *reduction*, not a block: the ad still plays,
 still loads, still counts as a real impression — the only thing that
@@ -20,34 +23,47 @@ real volume control — are implemented here.
 
 ## How it works
 
-Two components, talking over a local WebSocket:
+The extension is fully self-contained; the desktop widget is an optional
+add-on that talks to it over a local WebSocket:
 
 ```
-┌─────────────────────────┐        ws://127.0.0.1:8934        ┌───────────────────────────┐
-│  extension/              │ ───────────────────────────────▶ │  electron-app/             │
-│  Chrome content script    │  { state, videoTitle, channel,   │  Electron widget            │
-│  watches the YouTube      │    thumbnailUrl }                │  - owns the UI              │
-│  player DOM for ad state  │                                  │  - debounces transitions    │
-│  + mutes/unmutes its tab  │                                  │  - drives system volume     │
-└─────────────────────────┘                                    └───────────────────────────┘
+┌─────────────────────────┐                                   ┌───────────────────────────┐
+│  extension/              │        ws://127.0.0.1:8934        │  electron-app/ (optional)   │
+│  content script watches   │ ───────────────────────────────▶ │  Electron widget            │
+│  the YouTube player DOM   │  { state, videoTitle, channel,   │  - visual status panel      │
+│  for ad state + directly  │    thumbnailUrl }                │  - system-wide volume       │
+│  ducks the <video>        │                                  │  - manual full mute         │
+│  element's own volume     │ ◀─── chrome.storage.sync ──────▶ │  (nothing above needs this) │
+└─────────────────────────┘        (duckPercent setting)       └───────────────────────────┘
 ```
 
-- **`extension/`** — a Manifest V3 Chrome extension. A content script on
-  `youtube.com` observes the player element for the `ad-showing` /
-  `ad-interrupting` classes YouTube's own player adds (see
-  `extension/content.js`). On every change it reports state plus the
-  current video title/channel/thumbnail to a background service worker,
-  which forwards it to the widget over a local WebSocket and also mutes/
-  unmutes just that browser tab directly (`chrome.tabs.update`) for
-  immediate feedback.
-- **`electron-app/`** — a frameless, transparent, always-on-top widget
-  window that recreates the design's UI pixel-for-pixel (colors,
+- **`extension/`** — a Manifest V3 Chrome extension, and the whole product
+  on its own. A content script on `youtube.com` observes the player
+  element for the `ad-showing`/`ad-interrupting` classes YouTube's own
+  player adds (see `extension/content.js`), and on every ad/content
+  transition it **directly sets the `<video>` element's `.volume`** to
+  the chosen duck percentage (remembering and restoring the exact prior
+  level) — right there in the tab, no companion app involved. The duck
+  percentage (5/10/15%) is picked from the extension's popup and stored
+  in `chrome.storage.sync`, so it's remembered across browser restarts
+  and even syncs across your signed-in Chrome instances.
+
+  The content script also reports state plus the current video
+  title/channel/thumbnail to a background service worker, which mutes
+  that tab directly (`chrome.tabs.update`) for an extra immediate cue,
+  and forwards state over a local WebSocket to the optional desktop
+  widget if one happens to be running.
+- **`electron-app/` (optional)** — a frameless, transparent, always-on-top
+  widget window that recreates the design's UI pixel-for-pixel (colors,
   typography, spacing, equalizer, sweep animation, etc. — see
-  `electron-app/src/renderer/`), plus a 5%/10%/15% "Ad volume" picker.
-  Its main process runs the WebSocket server, debounces incoming
-  ad/content transitions (~400ms) so state doesn't flicker at ad
-  boundaries, tracks manual-mute overrides, and drives real OS-level
-  system volume (`electron-app/src/volume/`).
+  `electron-app/src/renderer/`), plus its own 5%/10%/15% "Ad volume"
+  picker and a manual full-mute override. Its main process runs the
+  WebSocket server, debounces incoming ad/content transitions (~400ms)
+  so state doesn't flicker at ad boundaries, and drives real OS-level
+  **system** volume (`electron-app/src/volume/`) — useful if you want
+  ads ducked even when they're not the focused tab's own audio, or want
+  the visual panel. Nothing the extension does on its own depends on
+  this being installed or running.
 
 Volume is controlled as a real 0–100 level on every platform (not just a
 mute flag), so an ad ducks to your chosen quiet percentage and a manual
@@ -102,7 +118,16 @@ those two for spies.
 
 ## Running it
 
-### 1. Widget app
+### 1. Browser extension (this alone is the whole standalone product)
+
+1. Open `chrome://extensions`, enable **Developer mode**.
+2. **Load unpacked** → select the `extension/` folder.
+3. Open a YouTube video. Click the extension's toolbar icon to pick a
+   duck level (5/10/15%) and see the current tab's status. Let an ad
+   play — its volume should duck to your chosen level and restore the
+   instant your video resumes. No desktop app needed for any of this.
+
+### 2. Widget app (optional)
 
 ```
 cd electron-app
@@ -112,15 +137,9 @@ npm start
 
 This opens the widget, pinned top-right, and starts listening for the
 extension on `ws://127.0.0.1:8934`. Until the extension connects, it shows
-the offline state.
-
-### 2. Browser extension
-
-1. Open `chrome://extensions`, enable **Developer mode**.
-2. **Load unpacked** → select the `extension/` folder.
-3. Open a YouTube video. The widget should flip to "ACTIVE" and start
-   reflecting whatever's playing, muting automatically whenever an ad
-   plays.
+the offline state. Once it connects, it mirrors whichever YouTube tab is
+active and additionally lets you duck the *system* volume and manually
+full-mute, on top of what the extension already does on its own.
 
 ## Building an installable app
 
@@ -155,9 +174,9 @@ electron-app/
   src/renderer/             the widget UI (index.html, styles.css, renderer.js)
 extension/
   manifest.json
-  content.js                YouTube player DOM watcher
-  background.js             WebSocket client + per-tab state + tab mute
-  popup.html                minimal status popup
+  content.js                YouTube player DOM watcher + standalone video-volume ducking
+  background.js             per-tab state, tab mute, optional WebSocket bridge, popup queries
+  popup.html / popup.js     duck-percent picker (5/10/15%) + current tab status
 design/                     original design handoff (reference only)
 .github/workflows/ci.yml    syntax/manifest checks + packaging smoke test
 ```
@@ -182,3 +201,10 @@ design/                     original design handoff (reference only)
 - System audio fingerprinting (the doc's fallback detection strategy) is
   not implemented — the extension-based detector is the only path, per the
   handoff's own recommendation.
+- The extension's local duck sets `video.volume` directly; if a user also
+  rides YouTube's own volume slider mid-ad, the two can step on each
+  other (last write wins). This mirrors the desktop widget's existing
+  limitation of not locking out YouTube's own controls during an ad.
+- `chrome.storage.sync` requires the user to be signed into Chrome to
+  actually sync across devices; if not signed in, it just behaves like
+  local storage on that one browser install.
