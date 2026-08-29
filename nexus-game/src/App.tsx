@@ -3,10 +3,8 @@ import { ClueType, Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle }
 
 // Clue order is [tangent, indirect, direct, tangent, indirect, direct]. The
 // board opens on the first triad (indices 0-2, hardest to easiest). The second
-// triad (indices 3-5) is held back and revealed one at a time, in the same
-// tangent/indirect/direct order, as hints.
+// triad (indices 3-5) starts locked — clicking a locked node reveals it.
 const INITIAL_INDICES = [0, 1, 2];
-const HINT_INDICES = [3, 4, 5];
 
 // Direct hints give away the most, so they cost the most; tangent hints give
 // away the least, so they're the cheapest to reveal.
@@ -70,11 +68,9 @@ export default function App() {
     }
   }
 
-  function revealHint() {
-    if (status !== 'playing') return;
-    const next = HINT_INDICES.find((i) => !revealedHints.includes(i));
-    if (next === undefined) return;
-    setRevealedHints((r) => [...r, next]);
+  function revealHint(i: number) {
+    if (status !== 'playing' || revealedHints.includes(i)) return;
+    setRevealedHints((r) => [...r, i]);
   }
 
   function giveUp() {
@@ -83,9 +79,6 @@ export default function App() {
   }
 
   const finalScore = status === 'won' ? scoreFor(puzzle, revealedHints, wrongGuesses.length) : 0;
-  const hintsLeft = HINT_INDICES.length - revealedHints.length;
-  const nextHintIndex = HINT_INDICES.find((i) => !revealedHints.includes(i));
-  const nextHintType = nextHintIndex !== undefined ? puzzle.clues[nextHintIndex].type : undefined;
 
   function shareText(): string {
     const nodesUsed = 3 + revealedHints.length;
@@ -136,24 +129,21 @@ export default function App() {
           const rad = (angle * Math.PI) / 180;
           const x = 50 + radius * Math.cos(rad);
           const y = 50 + radius * Math.sin(rad);
+          const onActivate = visible ? () => setExpandedIndex(i) : () => revealHint(i);
           return (
             <div
               key={i}
-              className={`node ${visible ? `node-${clue.type} node-clickable` : `node-hidden node-hidden-${clue.type}`}`}
+              className={`node node-clickable ${visible ? `node-${clue.type}` : `node-hidden node-hidden-${clue.type}`}`}
               style={{ left: `${x}%`, top: `${y}%` }}
-              {...(visible
-                ? {
-                    role: 'button',
-                    tabIndex: 0,
-                    onClick: () => setExpandedIndex(i),
-                    onKeyDown: (e: React.KeyboardEvent) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setExpandedIndex(i);
-                      }
-                    },
-                  }
-                : {})}
+              role="button"
+              tabIndex={status === 'playing' || visible ? 0 : -1}
+              onClick={onActivate}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onActivate();
+                }
+              }}
             >
               {visible ? (
                 <>
@@ -163,7 +153,7 @@ export default function App() {
               ) : (
                 <>
                   <span className="node-type node-type-locked">{clue.type}</span>
-                  <span className="node-lock">locked · -{HINT_PENALTIES[clue.type]} pts</span>
+                  <span className="node-lock">tap to reveal · -{HINT_PENALTIES[clue.type]} pts</span>
                 </>
               )}
             </div>
@@ -208,11 +198,6 @@ export default function App() {
             <button type="submit">Guess</button>
           </form>
           <div className="secondary-actions">
-            <button onClick={revealHint} disabled={hintsLeft === 0}>
-              {nextHintType
-                ? `Reveal ${nextHintType} hint (-${HINT_PENALTIES[nextHintType]} pts, ${hintsLeft} left)`
-                : 'No hints left'}
-            </button>
             <button className="give-up" onClick={giveUp}>
               Give up
             </button>
