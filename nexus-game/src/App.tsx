@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
 
-// Clue order: initial board shows the 2 tangent + 2 indirect clues (indices 0-3).
-// The 2 direct clues (indices 4-5) are held back as costly hints.
-const INITIAL_INDICES = [0, 1, 2, 3];
-const HINT_INDICES = [4, 5];
+// Clue order is [direct, indirect, tangent, direct, indirect, tangent]. The
+// board opens on the first triad (indices 0-2, one of each type). The second
+// triad (indices 3-5) is held back and revealed one at a time, in the same
+// direct/indirect/tangent order, as hints.
+const INITIAL_INDICES = [0, 1, 2];
+const HINT_INDICES = [3, 4, 5];
 
 const HINT_PENALTY = 30;
 const WRONG_GUESS_PENALTY = 5;
@@ -70,7 +72,7 @@ export default function App() {
   const hintsLeft = HINT_INDICES.length - revealedHints.length;
 
   function shareText(): string {
-    const nodesUsed = 4 + revealedHints.length;
+    const nodesUsed = 3 + revealedHints.length;
     if (status === 'won') {
       return `Nexus — ${puzzle.id}\nSolved with ${nodesUsed}/6 nodes, ${wrongGuesses.length} wrong guess${
         wrongGuesses.length === 1 ? '' : 'es'
@@ -91,7 +93,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>Nexus</h1>
-        <p className="tagline">Six clues orbit a hidden topic. Four are showing. Name the center.</p>
+        <p className="tagline">Six clues orbit a hidden topic — direct, indirect, tangent, then that trio again. Name the center.</p>
         <div className="mode-toggle">
           <button className={mode === 'daily' ? 'active' : ''} onClick={() => newGame('daily')}>
             Daily
@@ -170,7 +172,7 @@ export default function App() {
             <>
               <h2>Nailed it — {puzzle.answer}</h2>
               <p>
-                Solved using {4 + revealedHints.length}/6 nodes and {wrongGuesses.length} wrong guess
+                Solved using {3 + revealedHints.length}/6 nodes and {wrongGuesses.length} wrong guess
                 {wrongGuesses.length === 1 ? '' : 'es'}.
               </p>
               <p className="score">Score: {finalScore}</p>
