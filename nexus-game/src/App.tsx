@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
 
-// Clue order is [direct, indirect, tangent, direct, indirect, tangent]. The
-// board opens on the first triad (indices 0-2, one of each type). The second
+// Clue order is [tangent, indirect, direct, tangent, indirect, direct]. The
+// board opens on the first triad (indices 0-2, hardest to easiest). The second
 // triad (indices 3-5) is held back and revealed one at a time, in the same
-// direct/indirect/tangent order, as hints.
+// tangent/indirect/direct order, as hints.
 const INITIAL_INDICES = [0, 1, 2];
 const HINT_INDICES = [3, 4, 5];
 
@@ -93,7 +93,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>Nexus</h1>
-        <p className="tagline">Six clues orbit a hidden topic — direct, indirect, tangent, then that trio again. Name the center.</p>
+        <p className="tagline">Six clues orbit a hidden topic — tangent, indirect, direct, then that trio again. Name the center.</p>
         <div className="mode-toggle">
           <button className={mode === 'daily' ? 'active' : ''} onClick={() => newGame('daily')}>
             Daily
