@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
+import { ClueType, Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
 
 // Clue order is [tangent, indirect, direct, tangent, indirect, direct]. The
 // board opens on the first triad (indices 0-2, hardest to easiest). The second
@@ -8,7 +8,9 @@ import { Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './p
 const INITIAL_INDICES = [0, 1, 2];
 const HINT_INDICES = [3, 4, 5];
 
-const HINT_PENALTY = 30;
+// Direct hints give away the most, so they cost the most; tangent hints give
+// away the least, so they're the cheapest to reveal.
+const HINT_PENALTIES: Record<ClueType, number> = { tangent: 15, indirect: 25, direct: 40 };
 const WRONG_GUESS_PENALTY = 5;
 const BASE_SCORE = 100;
 
@@ -18,8 +20,9 @@ const NODE_ANGLES: NodeAngleDeg[] = [270, 330, 30, 90, 150, 210];
 
 type Status = 'playing' | 'won' | 'gaveUp';
 
-function scoreFor(hintsRevealed: number, wrongGuesses: number): number {
-  const raw = BASE_SCORE - hintsRevealed * HINT_PENALTY - wrongGuesses * WRONG_GUESS_PENALTY;
+function scoreFor(puzzle: Puzzle, revealedHints: number[], wrongGuesses: number): number {
+  const hintPenalty = revealedHints.reduce((sum, i) => sum + HINT_PENALTIES[puzzle.clues[i].type], 0);
+  const raw = BASE_SCORE - hintPenalty - wrongGuesses * WRONG_GUESS_PENALTY;
   return Math.max(10, raw);
 }
 
@@ -68,8 +71,10 @@ export default function App() {
     setStatus('gaveUp');
   }
 
-  const finalScore = status === 'won' ? scoreFor(revealedHints.length, wrongGuesses.length) : 0;
+  const finalScore = status === 'won' ? scoreFor(puzzle, revealedHints, wrongGuesses.length) : 0;
   const hintsLeft = HINT_INDICES.length - revealedHints.length;
+  const nextHintIndex = HINT_INDICES.find((i) => !revealedHints.includes(i));
+  const nextHintType = nextHintIndex !== undefined ? puzzle.clues[nextHintIndex].type : undefined;
 
   function shareText(): string {
     const nodesUsed = 3 + revealedHints.length;
@@ -123,7 +128,7 @@ export default function App() {
           return (
             <div
               key={i}
-              className={`node ${visible ? `node-${clue.type}` : 'node-hidden'}`}
+              className={`node ${visible ? `node-${clue.type}` : `node-hidden node-hidden-${clue.type}`}`}
               style={{ left: `${x}%`, top: `${y}%` }}
             >
               {visible ? (
@@ -132,7 +137,10 @@ export default function App() {
                   <p>{clue.text}</p>
                 </>
               ) : (
-                <span className="node-lock">locked hint</span>
+                <>
+                  <span className="node-type node-type-locked">{clue.type}</span>
+                  <span className="node-lock">locked · -{HINT_PENALTIES[clue.type]} pts</span>
+                </>
               )}
             </div>
           );
@@ -152,7 +160,9 @@ export default function App() {
           </form>
           <div className="secondary-actions">
             <button onClick={revealHint} disabled={hintsLeft === 0}>
-              Reveal a hint node ({hintsLeft} left, -{HINT_PENALTY} pts)
+              {nextHintType
+                ? `Reveal ${nextHintType} hint (-${HINT_PENALTIES[nextHintType]} pts, ${hintsLeft} left)`
+                : 'No hints left'}
             </button>
             <button className="give-up" onClick={giveUp}>
               Give up

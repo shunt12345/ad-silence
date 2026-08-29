@@ -167,6 +167,27 @@ body {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  gap: 4px;
+}
+
+.node-hidden-direct {
+  border-color: rgba(77, 163, 255, 0.4);
+}
+.node-hidden-indirect {
+  border-color: rgba(255, 184, 77, 0.4);
+}
+.node-hidden-tangent {
+  border-color: rgba(255, 93, 158, 0.4);
+}
+
+.node-type-locked {
+  background: transparent !important;
+  opacity: 0.75;
+}
+
+.node-lock {
+  font-size: 0.62rem;
+  color: var(--muted);
 }
 
 .controls {
