@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
-import { Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
+import { useEffect, useMemo, useState } from 'react';
+import { ClueType, Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
 
-// Clue order: initial board shows the 2 tangent + 2 indirect clues (indices 0-3).
-// The 2 direct clues (indices 4-5) are held back as costly hints.
-const INITIAL_INDICES = [0, 1, 2, 3];
-const HINT_INDICES = [4, 5];
+// Clue order is [tangent, indirect, direct, tangent, indirect, direct]. The
+// board opens on the first triad (indices 0-2, hardest to easiest). The second
+// triad (indices 3-5) starts locked — clicking a locked node reveals it.
+const INITIAL_INDICES = [0, 1, 2];
 
-const HINT_PENALTY = 30;
+// Direct hints give away the most, so they cost the most; tangent hints give
+// away the least, so they're the cheapest to reveal.
+const HINT_PENALTIES: Record<ClueType, number> = { tangent: 15, indirect: 25, direct: 40 };
 const WRONG_GUESS_PENALTY = 5;
 const BASE_SCORE = 100;
 
@@ -16,8 +18,9 @@ const NODE_ANGLES: NodeAngleDeg[] = [270, 330, 30, 90, 150, 210];
 
 type Status = 'playing' | 'won' | 'gaveUp';
 
-function scoreFor(hintsRevealed: number, wrongGuesses: number): number {
-  const raw = BASE_SCORE - hintsRevealed * HINT_PENALTY - wrongGuesses * WRONG_GUESS_PENALTY;
+function scoreFor(puzzle: Puzzle, revealedHints: number[], wrongGuesses: number): number {
+  const hintPenalty = revealedHints.reduce((sum, i) => sum + HINT_PENALTIES[puzzle.clues[i].type], 0);
+  const raw = BASE_SCORE - hintPenalty - wrongGuesses * WRONG_GUESS_PENALTY;
   return Math.max(10, raw);
 }
 
@@ -28,11 +31,21 @@ export default function App() {
   const [guess, setGuess] = useState('');
   const [wrongGuesses, setWrongGuesses] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>('playing');
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const visibleIndices = useMemo(
     () => [...INITIAL_INDICES, ...revealedHints].sort((a, b) => a - b),
     [revealedHints],
   );
+
+  useEffect(() => {
+    if (expandedIndex === null) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setExpandedIndex(null);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [expandedIndex]);
 
   function newGame(nextMode: 'daily' | 'practice') {
     setMode(nextMode);
@@ -41,6 +54,7 @@ export default function App() {
     setGuess('');
     setWrongGuesses([]);
     setStatus('playing');
+    setExpandedIndex(null);
   }
 
   function submitGuess(e: React.FormEvent) {
@@ -54,11 +68,9 @@ export default function App() {
     }
   }
 
-  function revealHint() {
-    if (status !== 'playing') return;
-    const next = HINT_INDICES.find((i) => !revealedHints.includes(i));
-    if (next === undefined) return;
-    setRevealedHints((r) => [...r, next]);
+  function revealHint(i: number) {
+    if (status !== 'playing' || revealedHints.includes(i)) return;
+    setRevealedHints((r) => [...r, i]);
   }
 
   function giveUp() {
@@ -66,11 +78,10 @@ export default function App() {
     setStatus('gaveUp');
   }
 
-  const finalScore = status === 'won' ? scoreFor(revealedHints.length, wrongGuesses.length) : 0;
-  const hintsLeft = HINT_INDICES.length - revealedHints.length;
+  const finalScore = status === 'won' ? scoreFor(puzzle, revealedHints, wrongGuesses.length) : 0;
 
   function shareText(): string {
-    const nodesUsed = 4 + revealedHints.length;
+    const nodesUsed = 3 + revealedHints.length;
     if (status === 'won') {
       return `Nexus — ${puzzle.id}\nSolved with ${nodesUsed}/6 nodes, ${wrongGuesses.length} wrong guess${
         wrongGuesses.length === 1 ? '' : 'es'
@@ -91,7 +102,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <h1>Nexus</h1>
-        <p className="tagline">Six clues orbit a hidden topic. Four are showing. Name the center.</p>
+        <p className="tagline">Six clues orbit a hidden topic — tangent, indirect, direct, then that trio again. Name the center.</p>
         <div className="mode-toggle">
           <button className={mode === 'daily' ? 'active' : ''} onClick={() => newGame('daily')}>
             Daily
@@ -118,11 +129,21 @@ export default function App() {
           const rad = (angle * Math.PI) / 180;
           const x = 50 + radius * Math.cos(rad);
           const y = 50 + radius * Math.sin(rad);
+          const onActivate = visible ? () => setExpandedIndex(i) : () => revealHint(i);
           return (
             <div
               key={i}
-              className={`node ${visible ? `node-${clue.type}` : 'node-hidden'}`}
+              className={`node node-clickable ${visible ? `node-${clue.type}` : `node-hidden node-hidden-${clue.type}`}`}
               style={{ left: `${x}%`, top: `${y}%` }}
+              role="button"
+              tabIndex={status === 'playing' || visible ? 0 : -1}
+              onClick={onActivate}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onActivate();
+                }
+              }}
             >
               {visible ? (
                 <>
@@ -130,12 +151,40 @@ export default function App() {
                   <p>{clue.text}</p>
                 </>
               ) : (
-                <span className="node-lock">locked hint</span>
+                <>
+                  <span className="node-type node-type-locked">{clue.type}</span>
+                  <span className="node-lock">tap to reveal · -{HINT_PENALTIES[clue.type]} pts</span>
+                </>
               )}
             </div>
           );
         })}
       </div>
+
+      {expandedIndex !== null && (
+        <div
+          className="node-overlay-backdrop"
+          onClick={() => setExpandedIndex(null)}
+          role="presentation"
+        >
+          <div
+            className={`node-overlay-card node-${puzzle.clues[expandedIndex].type}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              className="node-overlay-close"
+              onClick={() => setExpandedIndex(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <span className="node-type">{puzzle.clues[expandedIndex].type}</span>
+            <p>{puzzle.clues[expandedIndex].text}</p>
+          </div>
+        </div>
+      )}
 
       {status === 'playing' && (
         <div className="controls">
@@ -149,9 +198,6 @@ export default function App() {
             <button type="submit">Guess</button>
           </form>
           <div className="secondary-actions">
-            <button onClick={revealHint} disabled={hintsLeft === 0}>
-              Reveal a hint node ({hintsLeft} left, -{HINT_PENALTY} pts)
-            </button>
             <button className="give-up" onClick={giveUp}>
               Give up
             </button>
@@ -170,7 +216,7 @@ export default function App() {
             <>
               <h2>Nailed it — {puzzle.answer}</h2>
               <p>
-                Solved using {4 + revealedHints.length}/6 nodes and {wrongGuesses.length} wrong guess
+                Solved using {3 + revealedHints.length}/6 nodes and {wrongGuesses.length} wrong guess
                 {wrongGuesses.length === 1 ? '' : 'es'}.
               </p>
               <p className="score">Score: {finalScore}</p>

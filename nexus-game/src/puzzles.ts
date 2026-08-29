@@ -9,7 +9,10 @@ export interface Puzzle {
   id: string;
   answer: string;
   accepted: string[]; // lowercase alt spellings/synonyms that also count as correct
-  clues: [Clue, Clue, Clue, Clue, Clue, Clue]; // exactly 2 direct, 2 indirect, 2 tangent
+  // Clue order is always [tangent, indirect, direct, tangent, indirect, direct].
+  // The board opens on the first triad, hardest to easiest; the second triad is
+  // held back and revealed one at a time, in the same order, as hints.
+  clues: [Clue, Clue, Clue, Clue, Clue, Clue];
 }
 
 function norm(s: string): string {
@@ -27,12 +30,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'Whatever soft-bodied thing this is, its escape act obeys the exact rule that decides if a cat clears a fence gap: one hard structure sets the limit, and everything squishier than it just follows along.',
       },
       {
-        type: 'tangent',
-        text: 'Three separate pumps keep the blood moving here, the same headcount an aircraft carrier keeps on backup generators just in case one quits mid-crisis.',
-      },
-      {
         type: 'indirect',
         text: 'Neuroscientists arguing that a brain does not need to live in one central place point straight at this animal, since most of its thinking hardware is out in its limbs, not its skull.',
+      },
+      {
+        type: 'direct',
+        text: 'Its blood runs blue instead of red — copper handles the oxygen-carrying job that iron does in humans.',
+      },
+      {
+        type: 'tangent',
+        text: 'Three separate pumps keep the blood moving here, the same headcount an aircraft carrier keeps on backup generators just in case one quits mid-crisis.',
       },
       {
         type: 'indirect',
@@ -40,11 +47,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'Its blood runs blue instead of red, because copper does the oxygen-carrying job iron does in humans.',
-      },
-      {
-        type: 'direct',
-        text: 'It can wriggle its entire boneless body through any opening wider than its beak, the only rigid part it owns.',
+        text: 'A female of some species will starve herself guarding a single clutch of over 50,000 eggs for months, dying shortly after they finally hatch.',
       },
     ],
   },
@@ -58,12 +61,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'A shaken soda bottle and this landform are running the same script: trap dissolved gas under pressure, drop the pressure suddenly, and watch the contents lose their composure all at once.',
       },
       {
-        type: 'tangent',
-        text: 'Champagne producers worry about the identical failure mode that geologists study here — bubbles that stayed peacefully dissolved right up until the moment the cap came off.',
-      },
-      {
         type: 'indirect',
         text: 'Climate scientists trying to explain a mysteriously cold summer centuries ago eventually trace the chill back to sulfur this kind of event punched into the upper atmosphere.',
+      },
+      {
+        type: 'direct',
+        text: 'Magma sitting miles underground can exceed 2,000 degrees Fahrenheit before it ever reaches daylight.',
+      },
+      {
+        type: 'tangent',
+        text: 'Champagne producers worry about the identical failure mode that geologists study here — bubbles that stayed peacefully dissolved right up until the moment the cap came off.',
       },
       {
         type: 'indirect',
@@ -71,11 +78,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'Molten rock rises through a crack in the crust and, given enough built-up pressure, erupts as lava, ash, or gas.',
-      },
-      {
-        type: 'direct',
-        text: 'They are ranked as active, dormant, or extinct depending on how recently — and how likely again — they have blown their top.',
+        text: 'One widely used scale rates eruptions from 0 to 8, where each step up represents roughly a tenfold increase in material ejected.',
       },
     ],
   },
@@ -89,12 +92,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'A goat herder noticing his flock would not sleep after snacking on certain red berries is, by legend, the reason half the planet now has a morning ritual involving hot water and anxiety.',
       },
       {
-        type: 'tangent',
-        text: 'The same molecule that keeps this drink famous also shows up in a defense system some plants run against the insects that try to eat them — it is a pesticide wearing a beverage costume.',
-      },
-      {
         type: 'indirect',
         text: 'Commodity traders watching frost forecasts in Brazil are really watching the fate of one crop whose price swings can move markets thousands of miles away.',
+      },
+      {
+        type: 'direct',
+        text: 'The plant it comes from produces a fruit that looks and tastes far more like a cherry than anything associated with the drink itself.',
+      },
+      {
+        type: 'tangent',
+        text: 'The same molecule that keeps this drink famous also shows up in a defense system some plants run against the insects that try to eat them — it is a pesticide wearing a beverage costume.',
       },
       {
         type: 'indirect',
@@ -102,11 +109,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It is brewed from roasted seeds found inside the fruit of a particular flowering shrub.',
-      },
-      {
-        type: 'direct',
-        text: 'Caffeine is the active stimulant responsible for the alertness it is famous for delivering.',
+        text: 'A typical serving delivers somewhere around 80 to 100 milligrams of a stimulant that takes the body roughly six hours to clear half of.',
       },
     ],
   },
@@ -120,12 +123,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'The persistent myth that this structure is visible from the Moon fails for the same boring reason a single strand of hair fails to show up in a photo taken from across a football field: it is long, but nowhere near wide enough.',
       },
       {
-        type: 'tangent',
-        text: 'Border collies patrol sheep the same way this structure was meant to patrol a country — not by being unbreakable, but by making the cheap routes through obvious and the expensive ones necessary.',
-      },
-      {
         type: 'indirect',
         text: 'Historians studying why certain nomadic empires pushed relentlessly westward instead of south point to a very expensive, very long piece of engineering that made the southern route a bad bet.',
+      },
+      {
+        type: 'direct',
+        text: 'Some stretches are less a single continuous structure than a patchwork of trenches, rammed-earth mounds, and natural cliffs stitched into one defensive line.',
+      },
+      {
+        type: 'tangent',
+        text: 'Border collies patrol sheep the same way this structure was meant to patrol a country — not by being unbreakable, but by making the cheap routes through obvious and the expensive ones necessary.',
       },
       {
         type: 'indirect',
@@ -133,11 +140,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It was built and rebuilt across multiple Chinese dynasties, most famously reinforced during the Ming dynasty.',
-      },
-      {
-        type: 'direct',
-        text: 'It stretches for thousands of miles across northern China, following mountain ridgelines rather than the shortest path.',
+        text: 'Watchtowers along it could relay a warning across the countryside within hours, using smoke by day and fire beacons by night.',
       },
     ],
   },
@@ -151,12 +154,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'Solar panels and the green stuff carpeting the planet are both running the same hustle: catch photons, convert them into a form of energy the rest of the system can actually use.',
       },
       {
-        type: 'tangent',
-        text: 'A campfire is this process running in reverse at high speed — stored sunlight, locked away for years, getting cashed out all at once as heat and light.',
+        type: 'indirect',
+        text: "Geologists explaining why Earth's atmosphere used to be poisonous to most modern life point to a slow-motion pollution event caused entirely by organisms that were, at the time, just trying to make food.",
       },
       {
-        type: 'indirect',
-        text: 'Geologists explaining why Earth\'s atmosphere used to be poisonous to most modern life point to a slow-motion pollution event caused entirely by organisms that were, at the time, just trying to make food.',
+        type: 'direct',
+        text: 'The green pigment responsible absorbs nearly every wavelength of visible light except the one it reflects straight back at your eyes.',
+      },
+      {
+        type: 'tangent',
+        text: 'A campfire is this process running in reverse at high speed — stored sunlight, locked away for years, getting cashed out all at once as heat and light.',
       },
       {
         type: 'indirect',
@@ -164,11 +171,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It converts sunlight, water, and carbon dioxide into glucose, releasing oxygen as a byproduct.',
-      },
-      {
-        type: 'direct',
-        text: 'It happens inside chloroplasts, the pigment-packed structures that give plant leaves their green color.',
+        text: "A single large tree can produce roughly enough breathable gas in a day to cover one person's needs for that same day.",
       },
     ],
   },
@@ -182,12 +185,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'Gold miners chasing a vein that gets harder to find the deeper they dig are, by design, living out the exact same math that makes this digital asset scarcer with every passing year.',
       },
       {
-        type: 'tangent',
-        text: 'A potluck where everyone keeps an identical copy of the guest list, so no single lying attendee can sneak an extra name onto it, is basically how this technology stops anyone from cheating.',
-      },
-      {
         type: 'indirect',
         text: 'Energy analysts arguing over whether a payment network should be allowed to consume as much electricity as a mid-sized country are almost always arguing about this specific one.',
+      },
+      {
+        type: 'direct',
+        text: 'It was introduced in 2008 by a pseudonymous creator known as Satoshi Nakamoto.',
+      },
+      {
+        type: 'tangent',
+        text: 'A potluck where everyone keeps an identical copy of the guest list, so no single lying attendee can sneak an extra name onto it, is basically how this technology stops anyone from cheating.',
       },
       {
         type: 'indirect',
@@ -195,11 +202,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It was introduced in 2008 by a pseudonymous creator known as Satoshi Nakamoto.',
-      },
-      {
-        type: 'direct',
-        text: 'Its total supply is capped at 21 million coins, verified by a decentralized network rather than a bank.',
+        text: 'Its total supply is hard-capped at 21 million units, enforced by a decentralized network instead of a bank.',
       },
     ],
   },
@@ -213,12 +216,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'This structure grows about six inches taller on a hot summer day for the identical reason a metal lid on a stuck jar loosens after running it under hot water: heated metal simply takes up more room.',
       },
       {
-        type: 'tangent',
-        text: 'Radio hobbyists in the early twentieth century owe a debt to this structure the same way early aviators owed one to a tall hill with good wind — it just happened to be a very convenient tall thing to hang an antenna off of.',
-      },
-      {
         type: 'indirect',
         text: 'Architects defending an ugly, unpopular new building often invoke this now-beloved landmark, once mocked so viciously by Parisian artists that many petitioned to have it torn down.',
+      },
+      {
+        type: 'direct',
+        text: "Its design firm was run by a bridge engineer who, a few years earlier, had built the internal iron framework holding up the Statue of Liberty.",
+      },
+      {
+        type: 'tangent',
+        text: 'Radio hobbyists in the early twentieth century owe a debt to this structure the same way early aviators owed one to a tall hill with good wind — it just happened to be a very convenient tall thing to hang an antenna off of.',
       },
       {
         type: 'indirect',
@@ -226,11 +233,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It was built by Gustave Eiffel\'s engineering firm as the entrance arch for the 1889 World\'s Fair.',
-      },
-      {
-        type: 'direct',
-        text: 'It stands in Paris, France, and was for decades the tallest man-made structure on Earth.',
+        text: 'For 41 years it held the record as the tallest man-made structure on the planet, until a New York skyscraper took the title in 1930.',
       },
     ],
   },
@@ -244,12 +247,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'A cassette tape and this molecule both store their entire message in the exact order of a small alphabet — four letters here, magnetic pulses there — with no meaning left in any single unit alone.',
       },
       {
-        type: 'tangent',
-        text: 'Zip files and this molecule share the same obsession: cramming an enormous amount of information into the smallest possible physical space through relentless, elegant compression.',
-      },
-      {
         type: 'indirect',
         text: 'Genealogy companies mailing out cheek-swab kits are selling access to a personal archive that was, until very recently, completely unreadable to anyone.',
+      },
+      {
+        type: 'direct',
+        text: "One scientist's X-ray photograph, later nicknamed 'Photo 51,' handed two other researchers the critical clue that let them claim credit for describing its structure in 1953.",
+      },
+      {
+        type: 'tangent',
+        text: 'Zip files and this molecule share the same obsession: cramming an enormous amount of information into the smallest possible physical space through relentless, elegant compression.',
       },
       {
         type: 'indirect',
@@ -257,11 +264,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It is shaped like a double helix, discovered by Watson and Crick with critical help from Rosalind Franklin\'s X-ray images.',
-      },
-      {
-        type: 'direct',
-        text: 'It carries genetic instructions using four chemical bases: adenine, thymine, guanine, and cytosine.',
+        text: 'Stretched out end to end, the strands packed inside a single one of your cells would measure around six feet long.',
       },
     ],
   },
@@ -275,12 +278,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'Every teenager who has ever texted a crush using a phrase they invented on the spot is doing, in miniature, exactly what this writer did to the English language at industrial scale.',
       },
       {
-        type: 'tangent',
-        text: 'Soap operas thrive on the same tricks this writer leaned on centuries earlier: mistaken identity, poisoned drinks, and family feuds that ruin everyone\'s wedding plans.',
-      },
-      {
         type: 'indirect',
         text: 'Conspiracy theorists insisting that a commoner could not possibly have written such towering literature have spent four centuries trying to pin this author\'s work on noblemen instead.',
+      },
+      {
+        type: 'direct',
+        text: "Two of his fellow actors published a collected edition of his plays seven years after his death, without which roughly half of them might have been lost forever.",
+      },
+      {
+        type: 'tangent',
+        text: "Soap operas thrive on the same tricks this writer leaned on centuries earlier: mistaken identity, poisoned drinks, and family feuds that ruin everyone's wedding plans.",
       },
       {
         type: 'indirect',
@@ -288,11 +295,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'He wrote Hamlet, Macbeth, Romeo and Juliet, and dozens of other plays performed at London\'s Globe Theatre.',
-      },
-      {
-        type: 'direct',
-        text: 'He was born in Stratford-upon-Avon in 1564 and is widely considered the greatest writer in the English language.',
+        text: "He was baptized in a small English market town in 1564, and later left his wife only their 'second-best bed' in his will.",
       },
     ],
   },
@@ -306,12 +309,16 @@ export const PUZZLES: Puzzle[] = [
         text: 'A drain swallowing bathwater and this object are pulling the same trick at wildly different scales: past a certain point, nothing crossing the boundary is coming back out, no matter how hard it fights the current.',
       },
       {
-        type: 'tangent',
-        text: 'Debt that compounds past the point anyone could ever repay it behaves like this object\'s gravity well — cross a certain threshold and escape stops being mathematically possible, not just difficult.',
-      },
-      {
         type: 'indirect',
         text: 'Physicists debating whether information can ever truly be destroyed keep returning to this object as the ultimate stress test for the laws of the universe.',
+      },
+      {
+        type: 'direct',
+        text: 'The largest known examples, sitting at the centers of galaxies, can weigh as much as several billion Suns.',
+      },
+      {
+        type: 'tangent',
+        text: "Debt that compounds past the point anyone could ever repay it behaves like this object's gravity well — cross a certain threshold and escape stops being mathematically possible, not just difficult.",
       },
       {
         type: 'indirect',
@@ -319,11 +326,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It forms when a massive star collapses under its own gravity after running out of nuclear fuel.',
-      },
-      {
-        type: 'direct',
-        text: 'Its gravity is so strong that not even light can escape once it crosses the event horizon.',
+        text: 'The boundary marking its point of no return would measure only about 3.7 miles across for an object with the mass of our Sun.',
       },
     ],
   },
