@@ -28,7 +28,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'Its blood runs blue instead of red, because copper does the oxygen-carrying job iron does in humans.',
+        text: 'Its blood runs blue instead of red — copper handles the oxygen-carrying job that iron does in humans.',
       },
       {
         type: 'indirect',
@@ -40,7 +40,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It can wriggle its entire boneless body through any opening wider than its beak, the only rigid part it owns.',
+        text: 'A female of some species will starve herself guarding a single clutch of over 50,000 eggs for months, dying shortly after they finally hatch.',
       },
       {
         type: 'indirect',
@@ -59,7 +59,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'Molten rock rises through a crack in the crust and, given enough built-up pressure, erupts as lava, ash, or gas.',
+        text: 'Magma sitting miles underground can exceed 2,000 degrees Fahrenheit before it ever reaches daylight.',
       },
       {
         type: 'indirect',
@@ -71,7 +71,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'They are ranked as active, dormant, or extinct depending on how recently — and how likely again — they have blown their top.',
+        text: 'One widely used scale rates eruptions from 0 to 8, where each step up represents roughly a tenfold increase in material ejected.',
       },
       {
         type: 'indirect',
@@ -90,7 +90,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'It is brewed from roasted seeds found inside the fruit of a particular flowering shrub.',
+        text: 'The plant it comes from produces a fruit that looks and tastes far more like a cherry than anything associated with the drink itself.',
       },
       {
         type: 'indirect',
@@ -102,7 +102,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'Caffeine is the active stimulant responsible for the alertness it is famous for delivering.',
+        text: 'A typical serving delivers somewhere around 80 to 100 milligrams of a stimulant that takes the body roughly six hours to clear half of.',
       },
       {
         type: 'indirect',
@@ -121,7 +121,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'It was built and rebuilt across multiple Chinese dynasties, most famously reinforced during the Ming dynasty.',
+        text: 'Some stretches are less a single continuous structure than a patchwork of trenches, rammed-earth mounds, and natural cliffs stitched into one defensive line.',
       },
       {
         type: 'indirect',
@@ -133,7 +133,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It stretches for thousands of miles across northern China, following mountain ridgelines rather than the shortest path.',
+        text: 'Watchtowers along it could relay a warning across the countryside within hours, using smoke by day and fire beacons by night.',
       },
       {
         type: 'indirect',
@@ -152,7 +152,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'It converts sunlight, water, and carbon dioxide into glucose, releasing oxygen as a byproduct.',
+        text: 'The green pigment responsible absorbs nearly every wavelength of visible light except the one it reflects straight back at your eyes.',
       },
       {
         type: 'indirect',
@@ -164,7 +164,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It happens inside chloroplasts, the pigment-packed structures that give plant leaves their green color.',
+        text: "A single large tree can produce roughly enough breathable gas in a day to cover one person's needs for that same day.",
       },
       {
         type: 'indirect',
@@ -195,7 +195,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'Its total supply is capped at 21 million coins, verified by a decentralized network rather than a bank.',
+        text: 'Its total supply is hard-capped at 21 million units, enforced by a decentralized network instead of a bank.',
       },
       {
         type: 'indirect',
@@ -214,7 +214,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: "It was built by Gustave Eiffel's engineering firm as the entrance arch for the 1889 World's Fair.",
+        text: "Its design firm was run by a bridge engineer who, a few years earlier, had built the internal iron framework holding up the Statue of Liberty.",
       },
       {
         type: 'indirect',
@@ -226,7 +226,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It stands in Paris, France, and was for decades the tallest man-made structure on Earth.',
+        text: 'For 41 years it held the record as the tallest man-made structure on the planet, until a New York skyscraper took the title in 1930.',
       },
       {
         type: 'indirect',
@@ -245,7 +245,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: "It is shaped like a double helix, discovered by Watson and Crick with critical help from Rosalind Franklin's X-ray images.",
+        text: "One scientist's X-ray photograph, later nicknamed 'Photo 51,' handed two other researchers the critical clue that let them claim credit for describing its structure in 1953.",
       },
       {
         type: 'indirect',
@@ -257,7 +257,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'It carries genetic instructions using four chemical bases: adenine, thymine, guanine, and cytosine.',
+        text: 'Stretched out end to end, the strands packed inside a single one of your cells would measure around six feet long.',
       },
       {
         type: 'indirect',
@@ -276,7 +276,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: "He wrote Hamlet, Macbeth, Romeo and Juliet, and dozens of other plays performed at London's Globe Theatre.",
+        text: "Two of his fellow actors published a collected edition of his plays seven years after his death, without which roughly half of them might have been lost forever.",
       },
       {
         type: 'indirect',
@@ -288,7 +288,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'He was born in Stratford-upon-Avon in 1564 and is widely considered the greatest writer in the English language.',
+        text: "He was baptized in a small English market town in 1564, and later left his wife only their 'second-best bed' in his will.",
       },
       {
         type: 'indirect',
@@ -307,7 +307,7 @@ export const PUZZLES: Puzzle[] = [
     clues: [
       {
         type: 'direct',
-        text: 'It forms when a massive star collapses under its own gravity after running out of nuclear fuel.',
+        text: 'The largest known examples, sitting at the centers of galaxies, can weigh as much as several billion Suns.',
       },
       {
         type: 'indirect',
@@ -319,7 +319,7 @@ export const PUZZLES: Puzzle[] = [
       },
       {
         type: 'direct',
-        text: 'Its gravity is so strong that not even light can escape once it crosses the event horizon.',
+        text: 'The boundary marking its point of no return would measure only about 3.7 miles across for an object with the mass of our Sun.',
       },
       {
         type: 'indirect',
