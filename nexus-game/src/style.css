@@ -121,6 +121,27 @@ body {
 
 .node p {
   margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+
+.node-clickable {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.node-clickable:hover,
+.node-clickable:focus-visible {
+  transform: translate(-50%, -50%) scale(1.04);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  outline: none;
+}
+
+.node-clickable:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 .node-type {
@@ -283,6 +304,53 @@ footer {
   font-size: 0.75rem;
   font-family: sans-serif;
   margin-top: 48px;
+}
+
+.node-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 20;
+}
+
+.node-overlay-card {
+  position: relative;
+  max-width: 520px;
+  width: 100%;
+  background: var(--panel);
+  border-radius: 16px;
+  border: 2px solid #2a2c38;
+  padding: 28px 26px;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.node-overlay-card p {
+  margin: 0;
+}
+
+.node-overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.node-overlay-close:hover {
+  color: var(--text);
 }
 
 @media (max-width: 640px) {

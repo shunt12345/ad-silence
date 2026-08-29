@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ClueType, Puzzle, PUZZLES, isCorrectGuess, randomPuzzle, todaysPuzzle } from './puzzles';
 
 // Clue order is [tangent, indirect, direct, tangent, indirect, direct]. The
@@ -33,11 +33,21 @@ export default function App() {
   const [guess, setGuess] = useState('');
   const [wrongGuesses, setWrongGuesses] = useState<string[]>([]);
   const [status, setStatus] = useState<Status>('playing');
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const visibleIndices = useMemo(
     () => [...INITIAL_INDICES, ...revealedHints].sort((a, b) => a - b),
     [revealedHints],
   );
+
+  useEffect(() => {
+    if (expandedIndex === null) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setExpandedIndex(null);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [expandedIndex]);
 
   function newGame(nextMode: 'daily' | 'practice') {
     setMode(nextMode);
@@ -46,6 +56,7 @@ export default function App() {
     setGuess('');
     setWrongGuesses([]);
     setStatus('playing');
+    setExpandedIndex(null);
   }
 
   function submitGuess(e: React.FormEvent) {
@@ -128,8 +139,21 @@ export default function App() {
           return (
             <div
               key={i}
-              className={`node ${visible ? `node-${clue.type}` : `node-hidden node-hidden-${clue.type}`}`}
+              className={`node ${visible ? `node-${clue.type} node-clickable` : `node-hidden node-hidden-${clue.type}`}`}
               style={{ left: `${x}%`, top: `${y}%` }}
+              {...(visible
+                ? {
+                    role: 'button',
+                    tabIndex: 0,
+                    onClick: () => setExpandedIndex(i),
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setExpandedIndex(i);
+                      }
+                    },
+                  }
+                : {})}
             >
               {visible ? (
                 <>
@@ -146,6 +170,31 @@ export default function App() {
           );
         })}
       </div>
+
+      {expandedIndex !== null && (
+        <div
+          className="node-overlay-backdrop"
+          onClick={() => setExpandedIndex(null)}
+          role="presentation"
+        >
+          <div
+            className={`node-overlay-card node-${puzzle.clues[expandedIndex].type}`}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <button
+              className="node-overlay-close"
+              onClick={() => setExpandedIndex(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <span className="node-type">{puzzle.clues[expandedIndex].type}</span>
+            <p>{puzzle.clues[expandedIndex].text}</p>
+          </div>
+        </div>
+      )}
 
       {status === 'playing' && (
         <div className="controls">
